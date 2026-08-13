@@ -1,5 +1,45 @@
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T&S Reader</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
     <body>
-        <h1>Welcome to the Popup Page</h1>
+
+        <header>
+            <h1>T&S Reader</h1>
+            <span class="badge">Powered by Gemini</span>
+        </header>
+        <!-- 1. IDLE STATE -->
+        <div id="state-idle" class="state active">
+            <p class="description">Click below to analyze and summarize the Terms of Service or Privacy Policy on the current page.</p>
+            <button id="summarize-btn">Summarize Page</button>
+        </div>
+
+        <!-- 2. LOADING STATE -->
+        <div id="state-loading" class="state">
+            <div class="loading-container">
+                <div class="spinner"></div>
+                <p class="loading-text">Extracting text & analyzing with Gemini...</p>
+            </div>
+        </div>
+
+        <!-- 3. RESULT STATE -->
+        <div id="state-success" class="state">
+            <div id="summary-content" class="summary-box"></div>
+            <div id="cache-indicator" class="cache-notice" style="display: none;">
+                ⚡ <em>Instant summary loaded from cache.</em>
+            </div>
+            <button id="re-summarize-btn" style="margin-top: 12px;">Summarize Again</button>
+        </div>
+
+        <!-- 4. ERROR STATE -->
+        <div id="state-error" class="state">
+            <div id="error-message" class="error-box"></div>
+            <button id="retry-btn">Try Again</button>
+        </div>
+
+        <script src="popup.js"></script>
     </body>
 </html>

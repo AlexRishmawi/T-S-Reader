@@ -1,7 +1,7 @@
 const BACKEND_URL = 'http://localhost:5000/api/summarize';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'summarize') {
+    if (request.action === 'SUMMARIZE') {
        handleSummarize(sendResponse);
        return true; // Keep the message channel open for asynchronous response
     }
@@ -11,7 +11,7 @@ async function handleSummarize(sendResponse) {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab || !tab.id) {
-            return sendResponse({ success: false, error: 'No active tab found.' });\
+            return sendResponse({ success: false, error: 'No active tab found.' });
         }
 
         if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://')) {
