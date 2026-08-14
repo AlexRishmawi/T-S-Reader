@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const stateSuccess = document.getElementById('state-success');
 
     const summarizeBtn = document.getElementById('summarize-btn');
-    const resummarizeBtn = document.getElementById('re-summarize-btn');
     const retryBtn = document.getElementById('retry-btn');
 
     const summaryContent = document.getElementById('summary-content');
@@ -71,28 +70,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function requestSummary() {
         setState('loading');
+        summaryContent.innerHTML = '';
+        let fullText = '';
 
-        chrome.runtime.sendMessage({action: 'SUMMARIZE'}, (response) => {
-            if (chrome.runtime.lastError) {
-                errorMessage.textContent = chrome.runtime.lastError.message;
+        const port = chrome.runtime.connect({ name: "stream-summary" });
+
+        port.postMessage({ action: 'SUMMARIZE' });
+
+        port.onMessage.addListener((msg) => {
+            if (msg.error) {
+                errorMessage.textContent = msg.error;
                 setState('error');
-                return;
-            }
-            if (response && response.success) {
-                summaryContent.innerHTML = formatMarkDown(response.summary);
-                cacheIndicator.style.display = response.cached ? 'flex' : 'none';
+                port.disconnect();
+            } else if (msg.status === 'chunk') {
                 setState('success');
-            }
-
-            else {
-                errorMessage.textContent = response?.error || 'An unknown error occurred.';
-                setState('error');
+                fullText += msg.text;
+                summaryContent.innerHTML = formatMarkDown(fullText);
+            } else if (msg.status === 'done') {
+                cacheIndicator.style.display = msg.cached ? 'flex' : 'none';
+                port.disconnect();
             }
         });
     }
 
     if (summarizeBtn) summarizeBtn.addEventListener('click', requestSummary);
-    if (resummarizeBtn) resummarizeBtn.addEventListener('click', requestSummary);
     if (retryBtn) retryBtn.addEventListener('click', () => setState('idle'));
 
 });

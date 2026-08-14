@@ -1,21 +1,38 @@
 const BACKEND_URL = 'http://localhost:5000/api/summarize';
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'SUMMARIZE') {
-       handleSummarize(sendResponse);
-       return true; // Keep the message channel open for asynchronous response
+chrome.runtime.onConnect.addListener((port) => {
+    if (port.name === 'stream-summary') {
+        port.onMessage.addListener(async (msg) => {
+            if (msg.action === 'SUMMARIZE') {
+                await handleSummarize(port);
+            }
+        });
     }
 });
 
-async function handleSummarize(sendResponse) {
+async function handleSummarize(port) {
+    let isConnected = true;
+    port.onDisconnect.addListener(() => {
+        isConnected = false;
+    });
+
+    const safePost = (msg) => {
+        if (isConnected) {
+            try {
+                port.postMessage(msg);
+            } catch (e) {
+                isConnected = false;
+            }
+        }
+    };
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab || !tab.id) {
-            return sendResponse({ success: false, error: 'No active tab found.' });
+            return safePost({ success: false, error: 'No active tab found.' });
         }
 
         if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://')) {
-            return sendResponse({ success: false, error: 'Cannot summarize internal browser pages.' });
+            return safePost({ success: false, error: 'Cannot summarize internal browser pages.' });
         }
 
         const executionResult = await chrome.scripting.executeScript({
@@ -23,7 +40,7 @@ async function handleSummarize(sendResponse) {
             files: ['content.js']
         });
 
-        const extractedText = executionResult[0].result;
+        const extractedText = executionResult[0]?.result;
 
         const response = await fetch(BACKEND_URL, {
             method: 'POST',
@@ -32,17 +49,41 @@ async function handleSummarize(sendResponse) {
             },
             body: JSON.stringify({ text: extractedText, url: tab.url })
         });
-        
-        const data = await response.json();
 
         if (!response.ok) {
-            return sendResponse({ success: false, error: data.error || 'An error occurred while summarizing.' });
+            return safePost({ success: false, error: `Server responded with status ${response.status}` });
         }
 
-        sendResponse({ success: true, summary: data.summary, cached: data.cached || false });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+
+            if (!isConnected) {
+                reader.cancel();
+                break;
+            }
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            let boundary = buffer.indexOf('\n\n');
+            while (boundary !== -1) {
+                const chunk = buffer.slice(0, boundary);
+                buffer = buffer.slice(boundary + 2);
+                if (chunk.startsWith('data: ')) {
+                    const data = JSON.parse(chunk.substring(6));
+                    if (data.error) safePost({ error: data.error });
+                    if (data.text) safePost({ status: 'chunk', text: data.text });
+                    if (data.done) safePost({ status: 'done', cached: data.cached || false });
+                }
+                boundary = buffer.indexOf('\n\n');
+            }
+        }
 
     } catch (error) {
         console.error('Background script error:', error);
-        sendResponse({ success: false, error: 'Failed to connect to proxy.' });
+        safePost({ success: false, error: 'An unexpected error occurred while summarizing.' });
     }
 }
