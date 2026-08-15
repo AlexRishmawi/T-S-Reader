@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 
-app.use(express.json());
+app.use(express.json({limit: '10mb'}));
 const extensionID = process.env.EXTENSION_ID || 'default-extension-id';
 app.use(cors({
     origin: `chrome-extension://${extensionID}`,
