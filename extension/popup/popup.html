@@ -34,9 +34,13 @@
         </div>
 
         <!-- 4. ERROR STATE -->
-        <div id="state-error" class="state">
-            <div id="error-message" class="error-box"></div>
-            <button id="retry-btn">Try Again</button>
+        <div id="state-error" class="state error-view">
+            <div id="error-icon" class="error-badge">⚠️</div>
+            <h3 id="error-title" class="error-heading">Something went wrong</h3>
+            <p id="error-message" class="error-desc">We were unable to process this page.</p>
+            <div class="error-actions">
+                <button id="retry-btn" class="btn btn-secondary">Try Again</button>
+            </div>
         </div>
 
         <script src="popup.js"></script>

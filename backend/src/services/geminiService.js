@@ -23,10 +23,10 @@ Format your response using simple Markdown with these exact sections (omit a sec
 ### Data & Privacy
 * Detail what personal data is collected, whether data is sold or shared with third parties, and tracking mechanisms used.
 
-### 💳 Billing & Cancellation
+### Billing & Cancellation
 * Summarize renewal mechanics, refund policies, and account termination terms.
 
-### ✅ User Rights
+### User Rights
 * Mention key user entitlements, such as content ownership, data deletion options, or opt-out rights.
 
 Keep points direct, easy to scan, and focused on potential user risks.

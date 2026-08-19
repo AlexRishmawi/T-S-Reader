@@ -8,8 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const retryBtn = document.getElementById('retry-btn');
 
     const summaryContent = document.getElementById('summary-content');
-    const errorMessage = document.getElementById('error-message');
     const cacheIndicator = document.getElementById('cache-indicator');
+
+    const errorIcon = document.getElementById('error-icon');
+    const errorTitle = document.getElementById('error-title');
+    const errorMessage = document.getElementById('error-message');
 
     function setState(state) {
         stateIdle?.classList.remove('active');
@@ -79,8 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         port.onMessage.addListener((msg) => {
             if (msg.error) {
-                errorMessage.textContent = msg.error;
-                setState('error');
+                handleError(msg.error);
                 port.disconnect();
             } else if (msg.status === 'chunk') {
                 setState('success');
@@ -91,6 +93,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 port.disconnect();
             }
         });
+    }
+
+    function handleError(error) {
+        const errorMsg = String(error?.toLowerCase())
+        let title = "Something Went Wrong";
+        let message = "We were unable to process this page. Our service may be temporarily unavailable. Please try again later.";
+
+        if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
+            title = "Rate Limit Exceeded";
+            message = "You have had made too many requests recently. Please wait and try again later.";
+        } else if (errorMsg.includes('internal server error')) {
+            title = "Internal Server Error";
+            message = "The server encountered an unexpected condition. Please try again later.";
+        } else if (errorMsg.includes('invalid input')) {
+            title = "Invalid Input";
+            message = "The input text provided is invalid or empty. Please check and try again.";
+        } else if (errorMsg.includes('failed to fetch') || errorMsg.includes('500')) {
+            title = "Service Unavailable";
+            message = "Our service is unavailable at the moment. Please check your connection and try again later.";
+        }
+        if (title) errorTitle.textContent = title;
+        if (message) errorMessage.textContent = message;
+        setState('error');
     }
 
     if (summarizeBtn) summarizeBtn.addEventListener('click', requestSummary);
