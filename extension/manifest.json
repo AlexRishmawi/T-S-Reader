@@ -5,10 +5,12 @@
     "description": "A Chrome extension that reads T&S files.",
     "permissions": [
         "activeTab",
-        "scripting"
+        "scripting",
+        "storage"
     ],
     "host_permissions": [
-        "http://localhost:5000/*"
+        "https://t-s-reader.onrender.com/*",
+        "https://us.i.posthog.com/*"
     ],
     "icons": {
         "16": "icons/icon16.png",
