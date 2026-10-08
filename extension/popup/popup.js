@@ -1,4 +1,5 @@
-document.addEventListener('DOMContentLoaded', () => {
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
     const stateIdle = document.getElementById('state-idle');
     const stateLoading = document.getElementById('state-loading');
     const stateError = document.getElementById('state-error');
@@ -36,44 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function formatMarkDown(text) {
-        if(!text) return '';
-        let formatted = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        const lines = formatted.split('\n');
-        let inList = false;
-        let htmlResult = '';
-
-        lines.forEach(line => {
-            if (line.startsWith('- ') || line.startsWith('* ')) {
-                if (!inList) {
-                    htmlResult += '<ul>';
-                    inList = true;
-                }
-                htmlResult += `<li>${line.substring(2)}</li>`;
-            } else {
-                if (inList) {
-                    htmlResult += '</ul>';
-                    inList = false;
-                }
-                htmlResult += `<p>${line}</p>`;
-            }
-        });
-
-        if (inList) {
-            htmlResult += '</ul>';
-        }
-
-        return htmlResult;
-    }
-
     function requestSummary() {
         setState('loading');
-        summaryContent.innerHTML = '';
+        summaryContent.replaceChildren();
         let fullText = '';
 
         const port = chrome.runtime.connect({ name: "stream-summary" });
@@ -87,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (msg.status === 'chunk') {
                 setState('success');
                 fullText += msg.text;
-                summaryContent.innerHTML = formatMarkDown(fullText);
+                summaryContent.replaceChildren(formatMarkDown(fullText));
             } else if (msg.status === 'done') {
                 cacheIndicator.style.display = msg.cached ? 'flex' : 'none';
                 port.disconnect();
@@ -121,4 +87,52 @@ document.addEventListener('DOMContentLoaded', () => {
     if (summarizeBtn) summarizeBtn.addEventListener('click', requestSummary);
     if (retryBtn) retryBtn.addEventListener('click', () => setState('idle'));
 
-});
+    });
+}
+
+function formatMarkDown(text, doc = (typeof document !== 'undefined' ? document : null)) {
+    if (!doc) return null;
+    const fragment = doc.createDocumentFragment();
+    if (!text) return fragment;
+
+    const lines = text.split('\n');
+    let currentList = null;
+
+    function appendInlineFormattedText(parent, str) {
+        if (!str) return;
+        const parts = str.split(/(\*\*.*?\*\*)/g);
+        for (const part of parts) {
+            if (!part) continue;
+            if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+                const strong = doc.createElement('strong');
+                strong.textContent = part.slice(2, -2);
+                parent.appendChild(strong);
+            } else {
+                parent.appendChild(doc.createTextNode(part));
+            }
+        }
+    }
+
+    lines.forEach(line => {
+        if (line.startsWith('- ') || line.startsWith('* ')) {
+            if (!currentList) {
+                currentList = doc.createElement('ul');
+                fragment.appendChild(currentList);
+            }
+            const li = doc.createElement('li');
+            appendInlineFormattedText(li, line.substring(2));
+            currentList.appendChild(li);
+        } else {
+            currentList = null;
+            const p = doc.createElement('p');
+            appendInlineFormattedText(p, line);
+            fragment.appendChild(p);
+        }
+    });
+
+    return fragment;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { formatMarkDown };
+}
