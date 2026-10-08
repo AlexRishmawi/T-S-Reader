@@ -7,7 +7,7 @@ const router = express.Router();
 // Rate Limiter
 const limiter = rateLimit({
     windowMs: 60 * 1000 * 60, // 1 hour
-    max: 12, // limit each IP to 6 requests per windowMs (Change this before deployment)
+    max: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 6, // limit each IP to 6 requests per windowMs
     message: 'Too many requests from this IP, please try again after an hour',
     standardHeaders: true,
     legacyHeaders: false,
