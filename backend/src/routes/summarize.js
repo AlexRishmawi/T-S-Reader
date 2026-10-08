@@ -1,7 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { summarizeText } from '../services/geminiService.js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 const router = express.Router();
 
 // Rate Limiter
