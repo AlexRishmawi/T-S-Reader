@@ -1,9 +1,28 @@
 const IS_DEV = !('update_url' in chrome.runtime.getManifest());
-const BACKEND_URL = IS_DEV
-    ? 'http://localhost:5000/api/summarize'
-    : 'https://t-s-reader.onrender.com/api/summarize';
+const LOCAL_BACKEND_ORIGIN = 'http://localhost:5000';
+const PROD_BACKEND_ORIGIN = 'https://t-s-reader.onrender.com';
 const POSTHOG_URL = 'https://us.i.posthog.com';
 const POSTHOG_API_KEY = 'phc_Bx8S9DD6zTjW9WqCoh8hYahzPimXn7DRLuGWbToc52R8';
+
+async function getSummarizeUrl() {
+    if (!IS_DEV) {
+        return `${PROD_BACKEND_ORIGIN}/api/summarize`;
+    }
+
+    try {
+        const healthResponse = await fetch(`${LOCAL_BACKEND_ORIGIN}/health`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(1500),
+        });
+        if (healthResponse.ok) {
+            return `${LOCAL_BACKEND_ORIGIN}/api/summarize`;
+        }
+    } catch (_) {
+        // Local server is offline; fall back to Render production server
+    }
+
+    return `${PROD_BACKEND_ORIGIN}/api/summarize`;
+}
 
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
@@ -73,7 +92,8 @@ async function handleSummarize(port) {
             return safePost({ error: 'Could not extract readable text from this page.' });
         }
 
-        const response = await fetch(BACKEND_URL, {
+        const backendUrl = await getSummarizeUrl();
+        const response = await fetch(backendUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
