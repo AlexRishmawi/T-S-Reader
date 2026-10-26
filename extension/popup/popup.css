@@ -1,13 +1,53 @@
 :root {
         --primary: #2563eb;
         --primary-hover: #1d4ed8;
-        --bg: #ffffff;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #475569;
         --border: #e2e8f0;
-        --error-bg: #fef2f2;
+        --accent-warning: #ef4444;
+        --accent-warning-bg: #fef2f2;
+        --accent-privacy: #3b82f6;
+        --accent-billing: #f59e0b;
+        --accent-rights: #10b981;
+        --error-bg: #fffafa;
+        --error-border: #fee2e2;
+        --error-badge-bg: #fef2f2;
+        --error-badge-border: #fecaca;
         --error-text: #991b1b;
-        --badge-bg: #f1f5f9;
+        --btn-sec-bg: #f1f5f9;
+        --btn-sec-hover: #e2e8f0;
+        --btn-sec-border: #cbd5e1;
+        --btn-sec-text: #334155;
+        --scrollbar-thumb: #cbd5e1;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --accent-warning: #f87171;
+            --accent-warning-bg: rgba(239, 68, 68, 0.12);
+            --accent-privacy: #60a5fa;
+            --accent-billing: #fbbf24;
+            --accent-rights: #34d399;
+            --error-bg: rgba(127, 29, 29, 0.2);
+            --error-border: rgba(248, 113, 113, 0.3);
+            --error-badge-bg: rgba(239, 68, 68, 0.15);
+            --error-badge-border: rgba(248, 113, 113, 0.35);
+            --error-text: #fca5a5;
+            --btn-sec-bg: #1e293b;
+            --btn-sec-hover: #334155;
+            --btn-sec-border: #475569;
+            --btn-sec-text: #e2e8f0;
+            --scrollbar-thumb: #475569;
+        }
     }
 
     * {
@@ -17,7 +57,7 @@
     }
 
     body {
-        width: 360px;
+        width: 380px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: var(--bg);
         color: var(--text-main);
@@ -41,13 +81,10 @@
         gap: 8px;
     }
 
-    .badge {
-        font-size: 11px;
-        background: var(--badge-bg);
-        color: var(--text-muted);
-        padding: 2px 6px;
+    .header-icon {
+        width: 20px;
+        height: 20px;
         border-radius: 4px;
-        font-weight: 500;
     }
 
     /* States */
@@ -111,25 +148,85 @@
 
     /* Result State */
     .summary-box {
-        max-height: 320px;
+        max-height: 340px;
         overflow-y: auto;
         font-size: 13px;
         line-height: 1.5;
         color: var(--text-main);
         padding-right: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
 
-    .summary-box ul {
-        padding-left: 18px;
-        margin-bottom: 8px;
+    .summary-box::-webkit-scrollbar {
+        width: 5px;
     }
 
-    .summary-box li {
+    .summary-box::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .summary-box::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar-thumb);
+        border-radius: 999px;
+    }
+
+    .summary-section {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--primary);
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+    .summary-section.section-warning {
+        border-left-color: var(--accent-warning);
+        background-color: var(--accent-warning-bg);
+    }
+
+    .summary-section.section-privacy {
+        border-left-color: var(--accent-privacy);
+    }
+
+    .summary-section.section-billing {
+        border-left-color: var(--accent-billing);
+    }
+
+    .summary-section.section-rights {
+        border-left-color: var(--accent-rights);
+    }
+
+    .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
         margin-bottom: 6px;
     }
 
+    .summary-section.section-warning .section-title {
+        color: var(--accent-warning);
+    }
+
+    .summary-box ul {
+        padding-left: 16px;
+        margin: 0;
+    }
+
+    .summary-box li {
+        margin-bottom: 5px;
+    }
+
+    .summary-box li:last-child {
+        margin-bottom: 0;
+    }
+
     .summary-box p {
-        margin-bottom: 8px;
+        margin-bottom: 6px;
+    }
+
+    .summary-box p:last-child {
+        margin-bottom: 0;
     }
 
     .cache-notice {
@@ -151,16 +248,17 @@
         line-height: 1.4;
         margin-bottom: 12px;
     }
+
     .error-view {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 24px 16px;
-    background: #fffafa;
-    border: 1px solid #fee2e2;
-    border-radius: 12px;
-    margin: 8px 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 24px 16px;
+        background: var(--error-bg);
+        border: 1px solid var(--error-border);
+        border-radius: 12px;
+        margin: 8px 0;
     }
 
     .error-view.active {
@@ -174,24 +272,24 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #fef2f2;
+        background: var(--error-badge-bg);
         border-radius: 50%;
         margin-bottom: 12px;
-        border: 1px solid #fecaca;
+        border: 1px solid var(--error-badge-border);
     }
 
     .error-heading {
         margin: 0 0 6px 0;
         font-size: 15px;
         font-weight: 600;
-        color: #991b1b;
+        color: var(--error-text);
     }
 
     .error-desc {
         margin: 0 0 16px 0;
         font-size: 13px;
         line-height: 1.45;
-        color: #6b7280;
+        color: var(--text-muted);
         max-width: 260px;
     }
 
@@ -203,9 +301,9 @@
     }
 
     .btn-secondary {
-        background: #f3f4f6;
-        color: #374151;
-        border: 1px solid #d1d5db;
+        background: var(--btn-sec-bg);
+        color: var(--btn-sec-text);
+        border: 1px solid var(--btn-sec-border);
         border-radius: 6px;
         padding: 8px 16px;
         font-size: 13px;
@@ -215,5 +313,5 @@
     }
 
     .btn-secondary:hover {
-        background: #e5e7eb;
+        background: var(--btn-sec-hover);
     }

@@ -1,4 +1,7 @@
-const BACKEND_URL = 'https://t-s-reader.onrender.com/api/summarize';
+const IS_DEV = !('update_url' in chrome.runtime.getManifest());
+const BACKEND_URL = IS_DEV
+    ? 'http://localhost:5000/api/summarize'
+    : 'https://t-s-reader.onrender.com/api/summarize';
 const POSTHOG_URL = 'https://us.i.posthog.com';
 const POSTHOG_API_KEY = 'phc_Bx8S9DD6zTjW9WqCoh8hYahzPimXn7DRLuGWbToc52R8';
 
@@ -124,7 +127,13 @@ async function handleSummarize(port) {
 
     } catch (error) {
         console.error('Background script error:', error);
-        safePost({ success: false, error: 'An unexpected error occurred while summarizing.' });
+        const isFetchError = error?.message?.toLowerCase().includes('failed to fetch');
+        safePost({
+            success: false,
+            error: isFetchError
+                ? 'Failed to fetch: could not connect to summarization server.'
+                : 'An unexpected error occurred while summarizing.',
+        });
     }
 }
 

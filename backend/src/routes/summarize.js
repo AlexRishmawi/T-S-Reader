@@ -36,8 +36,12 @@ router.post('/summarize', limiter, async (req, res) => {
 
     } catch (error) {
         console.error('Streaming error:', error);
-        if (error.status === 429 || error.message?.includes('429')) {
-            res.write(`data: ${JSON.stringify({ error: 'Rate limit exceeded. Try again later.' })}\n\n`);
+        const message = error?.message?.toLowerCase() || '';
+
+        if (error?.status === 503 || message.includes('503') || message.includes('high demand') || message.includes('service unavailable')) {
+            res.write(`data: ${JSON.stringify({ error: 'Service overloaded (503). High demand right now, please try again shortly.' })}\n\n`);
+        } else if (error?.status === 429 || message.includes('429')) {
+            res.write(`data: ${JSON.stringify({ error: 'Rate limit exceeded (429). Try again later.' })}\n\n`);
         } else {
             res.write(`data: ${JSON.stringify({ error: 'Internal server error' })}\n\n`);
         }

@@ -6,11 +6,20 @@ import summarizeRoutes from './routes/summarize.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const allowedOrigins = (process.env.EXTENSION_ID || '')
+    .split(',')
+    .map(id => `chrome-extension://${id.trim()}`);
 
 app.use(express.json({limit: '10mb'}));
 const extensionID = process.env.EXTENSION_ID || 'default-extension-id';
 app.use(cors({
-    origin: `chrome-extension://${extensionID}`,
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['POST', 'OPTIONS'],
     optionsSuccessStatus: 200
 }));

@@ -36,44 +36,90 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function formatMarkDown(text) {
-        if(!text) return '';
-        let formatted = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        const lines = formatted.split('\n');
-        let inList = false;
-        let htmlResult = '';
+    function appendFormattedInline(parent, text) {
+        const parts = text.split(/\*\*(.*?)\*\*/g);
+        parts.forEach((part, index) => {
+            if (!part) return;
+            if (index % 2 === 1) {
+                const strong = document.createElement('strong');
+                strong.textContent = part;
+                parent.appendChild(strong);
+            } else {
+                parent.appendChild(document.createTextNode(part));
+            }
+        });
+    }
+
+    function getSectionClass(headingText) {
+        const lower = headingText.toLowerCase();
+        if (lower.includes('red flag') || lower.includes('gotcha')) return 'section-warning';
+        if (lower.includes('data') || lower.includes('privacy')) return 'section-privacy';
+        if (lower.includes('billing') || lower.includes('cancel')) return 'section-billing';
+        if (lower.includes('right')) return 'section-rights';
+        return 'section-default';
+    }
+
+    function renderSummary(container, text) {
+        if (!text) {
+            container.replaceChildren();
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        const lines = text.split('\n');
+        let currentSection = null;
+        let currentList = null;
+
+        const ensureSection = () => {
+            if (!currentSection) {
+                currentSection = document.createElement('section');
+                currentSection.className = 'summary-section section-default';
+                fragment.appendChild(currentSection);
+            }
+            return currentSection;
+        };
 
         lines.forEach(line => {
-            if (line.startsWith('- ') || line.startsWith('* ')) {
-                if (!inList) {
-                    htmlResult += '<ul>';
-                    inList = true;
+            const trimmed = line.trim();
+            if (!trimmed) return;
+
+            if (trimmed.startsWith('#')) {
+                const headingText = trimmed.replace(/^#{1,4}\s*/, '').trim();
+                if (!headingText) return;
+
+                currentList = null;
+                currentSection = document.createElement('section');
+                currentSection.className = `summary-section ${getSectionClass(headingText)}`;
+
+                const h3 = document.createElement('h3');
+                h3.className = 'section-title';
+                appendFormattedInline(h3, headingText);
+                currentSection.appendChild(h3);
+                fragment.appendChild(currentSection);
+            } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                const section = ensureSection();
+                if (!currentList) {
+                    currentList = document.createElement('ul');
+                    section.appendChild(currentList);
                 }
-                htmlResult += `<li>${line.substring(2)}</li>`;
+                const li = document.createElement('li');
+                appendFormattedInline(li, trimmed.substring(2).trim());
+                currentList.appendChild(li);
             } else {
-                if (inList) {
-                    htmlResult += '</ul>';
-                    inList = false;
-                }
-                htmlResult += `<p>${line}</p>`;
+                currentList = null;
+                const section = ensureSection();
+                const p = document.createElement('p');
+                appendFormattedInline(p, trimmed);
+                section.appendChild(p);
             }
         });
 
-        if (inList) {
-            htmlResult += '</ul>';
-        }
-
-        return htmlResult;
+        container.replaceChildren(fragment);
     }
 
     function requestSummary() {
         setState('loading');
-        summaryContent.innerHTML = '';
+        summaryContent.replaceChildren();
         let fullText = '';
 
         const port = chrome.runtime.connect({ name: "stream-summary" });
@@ -87,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (msg.status === 'chunk') {
                 setState('success');
                 fullText += msg.text;
-                summaryContent.innerHTML = formatMarkDown(fullText);
+                renderSummary(summaryContent, fullText);
             } else if (msg.status === 'done') {
                 cacheIndicator.style.display = msg.cached ? 'flex' : 'none';
                 port.disconnect();
@@ -96,25 +142,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleError(error) {
-        const errorMsg = String(error?.toLowerCase())
-        let title = "Something Went Wrong";
-        let message = "We were unable to process this page. Our service may be temporarily unavailable. Please try again later.";
+        const errorMsg = String(error || '').toLowerCase();
+        let icon = '⚠️';
+        let title = 'Unable to Summarize';
+        let message = "We couldn't finish summarizing this page right now. Please try again in a moment.";
 
-        if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
-            title = "Rate Limit Exceeded";
-            message = "You have had made too many requests recently. Please wait and try again later.";
-        } else if (errorMsg.includes('internal server error')) {
-            title = "Internal Server Error";
-            message = "The server encountered an unexpected condition. Please try again later.";
-        } else if (errorMsg.includes('invalid input')) {
-            title = "Invalid Input";
-            message = "The input text provided is invalid or empty. Please check and try again.";
-        } else if (errorMsg.includes('failed to fetch') || errorMsg.includes('500')) {
-            title = "Service Unavailable";
-            message = "Our service is unavailable at the moment. Please check your connection and try again later.";
+        if (errorMsg.includes('503') || errorMsg.includes('overloaded') || errorMsg.includes('high demand')) {
+            icon = '⏳';
+            title = 'High Demand Right Now';
+            message = 'The summarization service is experiencing temporary high traffic. Please wait a few seconds and try again.';
+        } else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
+            icon = '⏱️';
+            title = 'Too Many Requests';
+            message = "You've reached the temporary request limit. Please wait a little while before summarizing another page.";
+        } else if (errorMsg.includes('internal browser page')) {
+            icon = '🔒';
+            title = 'Unsupported Page';
+            message = "Browser settings and internal pages can't be summarized. Open a website's Terms or Privacy page instead.";
+        } else if (errorMsg.includes('extract readable text') || errorMsg.includes('invalid input') || errorMsg.includes('no active tab')) {
+            icon = '📄';
+            title = 'No Readable Terms Found';
+            message = "We couldn't find enough readable text on this page. Try opening the full Terms of Service or Privacy Policy.";
+        } else if (errorMsg.includes('failed to fetch')) {
+            icon = '🔌';
+            title = 'Unable to Connect';
+            message = 'Could not reach the summarization server. Check your internet connection or try again shortly.';
+        } else if (errorMsg.includes('internal server error') || errorMsg.includes('500')) {
+            icon = '⚠️';
+            title = 'Temporary Server Issue';
+            message = 'Something went wrong on our end while analyzing this page. Please try again shortly.';
         }
-        if (title) errorTitle.textContent = title;
-        if (message) errorMessage.textContent = message;
+
+        if (errorIcon) errorIcon.textContent = icon;
+        if (errorTitle) errorTitle.textContent = title;
+        if (errorMessage) errorMessage.textContent = message;
         setState('error');
     }
 
